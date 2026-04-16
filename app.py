@@ -1,614 +1,420 @@
+# ===============================
+# MEDIFIND PRO — PREMIUM HOSPITAL FINDER
+# ===============================
+
 import streamlit as st
 import pandas as pd
 import numpy as np
-import random
-import math
 import plotly.express as px
+import random
 import folium
 from streamlit_folium import st_folium
+import pydeck as pdk
+from faker import Faker
+from geopy.distance import geodesic
 
-# -------------------------
+fake = Faker("en_IN")
+
+# ===============================
 # PAGE CONFIG
-# -------------------------
+# ===============================
 
 st.set_page_config(
-    page_title="MediFind India",
+    page_title="MediFind Pro",
     page_icon="🏥",
     layout="wide"
 )
 
-# -------------------------
-# METRO HOSPITAL DATA
-# -------------------------
+# ===============================
+# PREMIUM CSS
+# ===============================
 
-CITIES = {
+st.markdown("""
+<style>
 
-"Nagpur": [
-"Kingsway Hospital",
-"Orange City Hospital",
-"Alexis Multispeciality Hospital",
-"Wockhardt Hospital Nagpur",
-"SevenStar Hospital"
+.main {
+    background: linear-gradient(to right,#eef2ff,#f8fafc);
+}
+
+.hero {
+    background: linear-gradient(135deg,#1e3a8a,#2563eb);
+    padding:35px;
+    border-radius:18px;
+    color:white;
+    margin-bottom:25px;
+}
+
+.card {
+    background:white;
+    padding:20px;
+    border-radius:15px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.08);
+    margin-bottom:15px;
+}
+
+.badge {
+    background:#dbeafe;
+    color:#1e40af;
+    padding:4px 10px;
+    border-radius:12px;
+    margin:2px;
+    font-size:12px;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+# ===============================
+# REAL MAJOR METRO DATA
+# ===============================
+
+cities_data = {
+
+"Mumbai":[
+("Kokilaben Dhirubhai Ambani Hospital",19.1197,72.8346),
+("Lilavati Hospital",19.0596,72.8295),
+("Nanavati Max Hospital",19.0988,72.8402)
 ],
 
-"Mumbai": [
-"Kokilaben Hospital",
-"Lilavati Hospital",
-"Nanavati Hospital",
-"Jaslok Hospital",
-"Fortis Mulund"
+"Delhi":[
+("AIIMS Delhi",28.5672,77.2100),
+("Max Super Speciality Hospital",28.5675,77.2105),
+("Fortis Escorts Heart Institute",28.5601,77.2732)
 ],
 
-"Delhi": [
-"AIIMS Delhi",
-"Max Hospital",
-"Apollo Delhi",
-"Safdarjung Hospital",
-"Ganga Ram Hospital"
+"Bengaluru":[
+("Manipal Hospital",12.9576,77.6428),
+("Apollo Hospital Bannerghatta",12.8950,77.5960),
+("Fortis Hospital Bannerghatta",12.8962,77.5971)
 ],
 
-"Bengaluru": [
-"Manipal Hospital",
-"Apollo Bengaluru",
-"Narayana Health",
-"Victoria Hospital",
-"Sakra World Hospital"
+"Chennai":[
+("Apollo Hospitals Greams Road",13.0569,80.2409),
+("Fortis Malar Hospital",13.0400,80.2500),
+("MIOT International Hospital",13.0250,80.2000)
 ],
 
-"Chennai": [
-"Apollo Chennai",
-"MIOT Hospital",
-"Kauvery Hospital",
-"SIMS Hospital",
-"Fortis Malar"
+"Hyderabad":[
+("Apollo Hospitals Jubilee Hills",17.4176,78.4347),
+("Yashoda Hospital",17.4300,78.4100),
+("Care Hospital",17.4250,78.4500)
+],
+
+"Pune":[
+("Ruby Hall Clinic",18.5362,73.8767),
+("Jehangir Hospital",18.5308,73.8797),
+("Sahyadri Hospital",18.5000,73.8600)
+],
+
+"Nagpur":[
+("Kingsway Hospital",21.1458,79.0882),
+("Orange City Hospital",21.0867,79.0495),
+("Wockhardt Hospital",21.1250,79.0900)
 ]
 
 }
 
-SPECIALITIES = [
-"General Medicine",
-"Surgery",
-"Pediatrics",
-"Gynecology",
-"Orthopedics",
+specialities = [
 "Cardiology",
+"Orthopedics",
 "Neurology",
-"Dermatology",
-"Dentistry",
-"Physiotherapy"
+"Pediatrics",
+"Oncology",
+"Dermatology"
 ]
 
-DOCTOR_NAMES = [
-"Dr. Amit Sharma",
-"Dr. Priya Mehta",
-"Dr. Rajesh Gupta",
-"Dr. Neha Kulkarni",
-"Dr. Rohit Verma",
-"Dr. Sneha Patil",
-"Dr. Rahul Joshi",
-"Dr. Meena Iyer"
-]
-
-SCHEMES = [
-"Ayushman Bharat",
-"CGHS",
-"ESIC"
-]
-
-# -------------------------
-# GENERATE HOSPITAL DATA
-# -------------------------
-
-def generate_hospital(city, name):
-
-    beds = random.randint(200, 800)
-
-    hospital = {
-
-        "name": name,
-
-        "type":
-        "Government"
-        if "Hospital" in name
-        else "Private",
-
-        "address":
-        f"Main Road, {city}",
-
-        "lat":
-        round(random.uniform(18, 28), 4),
-
-        "lon":
-        round(random.uniform(72, 88), 4),
-
-        "rating":
-        round(random.uniform(4.0, 4.9), 1),
-
-        "beds": beds,
-
-        "vacant_beds":
-        random.randint(20, beds//2),
-
-        "specialities":
-        random.sample(
-            SPECIALITIES,
-            6
-        ),
-
-        "schemes":
-        random.sample(
-            SCHEMES,
-            2
-        ),
-
-        "patient_stats": {
-
-            "monthly":
-            [random.randint(2000,5000)
-             for _ in range(6)]
-
-        },
-
-        "doctors": [
-
-            {
-
-                "name":
-                random.choice(
-                    DOCTOR_NAMES
-                ),
-
-                "speciality":
-                random.choice(
-                    SPECIALITIES
-                ),
-
-                "timing":
-                "Mon–Sat 9am–2pm",
-
-                "contact":
-                f"+91-98{random.randint(10000000,99999999)}"
-
-            }
-
-            for _ in range(6)
-
-        ]
-
-    }
-
-    return hospital
-
-
-# Build dataset
-HOSPITALS = {}
-
-for city, names in CITIES.items():
-
-    HOSPITALS[city] = [
-
-        generate_hospital(
-            city,
-            name
-        )
-
-        for name in names
-
-    ]
-
-
-# -------------------------
-# LIVE BED SIMULATION
-# -------------------------
-
-def update_beds():
-
-    for city in HOSPITALS:
-
-        for h in HOSPITALS[city]:
-
-            h["vacant_beds"] = random.randint(
-                10,
-                h["beds"]//2
-            )
-
-update_beds()
-
-
-# -------------------------
-# DISTANCE FUNCTION
-# -------------------------
-
-def calculate_distance(
-lat1, lon1,
-lat2, lon2):
-
-    R = 6371
-
-    d_lat = math.radians(lat2-lat1)
-    d_lon = math.radians(lon2-lon1)
-
-    a = (
-        math.sin(d_lat/2)**2 +
-        math.cos(math.radians(lat1)) *
-        math.cos(math.radians(lat2)) *
-        math.sin(d_lon/2)**2
-    )
-
-    c = 2 * math.atan2(
-        math.sqrt(a),
-        math.sqrt(1-a)
-    )
-
-    return R * c
-
-
-# -------------------------
-# RANKING FUNCTION
-# -------------------------
-
-def calculate_score(h):
-
-    rating_score = h["rating"] * 20
-
-    bed_score = (
-        h["vacant_beds"]
-        / h["beds"]
-    ) * 100
-
-    doctor_score = len(
-        h["doctors"]
-    ) * 5
-
-    speciality_score = len(
-        h["specialities"]
-    ) * 3
-
-    return round(
-
-        rating_score +
-        bed_score +
-        doctor_score +
-        speciality_score,
-
-        2
-
-    )
-
-
-# -------------------------
-# SIDEBAR
-# -------------------------
-
-with st.sidebar:
-
-    st.title("🏥 MediFind")
-
-    selected_city = st.selectbox(
-        "Select City",
-        list(HOSPITALS.keys())
-    )
-
-    hospital_type = st.selectbox(
-        "Hospital Type",
-        ["All","Government","Private"]
-    )
-
-    speciality_filter = st.selectbox(
-        "Speciality",
-        ["All"] + SPECIALITIES
-    )
-
-    page = st.radio(
-
-        "Navigation",
-
-        [
-
-        "🏥 Hospitals",
-
-        "📍 Nearest",
-
-        "🏆 Rankings",
-
-        "📊 Analytics",
-
-        "🗺️ Map",
-
-        "📅 Appointment"
-
-        ]
-
-    )
-
-# -------------------------
-# FILTER DATA
-# -------------------------
-
-filtered = []
-
-for h in HOSPITALS[selected_city]:
-
-    if hospital_type != "All":
-
-        if h["type"] != hospital_type:
-            continue
-
-    if speciality_filter != "All":
-
-        if speciality_filter not in h["specialities"]:
-            continue
-
-    filtered.append(h)
-
-
-# -------------------------
-# PAGE 1 — HOSPITALS
-# -------------------------
-
-if page == "🏥 Hospitals":
-
-    st.title("🏥 Hospitals")
-
-    for h in filtered:
-
-        with st.container():
-
-            st.subheader(h["name"])
-
-            col1,col2,col3 = st.columns(3)
-
-            col1.metric(
-                "⭐ Rating",
-                h["rating"]
-            )
-
-            col2.metric(
-                "🛏️ Vacant Beds",
-                h["vacant_beds"]
-            )
-
-            col3.metric(
-                "🏥 Total Beds",
-                h["beds"]
-            )
-
-            st.write("📍",h["address"])
-
-            st.write(
-                "🩺 Specialities:",
-                ", ".join(
-                    h["specialities"]
-                )
-            )
-
-            st.write(
-                "🏥 Schemes:",
-                ", ".join(
-                    h["schemes"]
-                )
-            )
-
-            with st.expander("👨‍⚕️ Doctors"):
-
-                for doc in h["doctors"]:
-
-                    st.write(
-                        doc["name"],
-                        "-",
-                        doc["speciality"]
-                    )
-
-
-# -------------------------
-# PAGE 2 — NEAREST
-# -------------------------
-
-elif page == "📍 Nearest":
-
-    st.title("📍 Nearest Hospitals")
-
-    user_lat = st.number_input(
-        "Latitude",
-        value=21.1458
-    )
-
-    user_lon = st.number_input(
-        "Longitude",
-        value=79.0882
-    )
-
-    distances = []
-
-    for h in filtered:
-
-        d = calculate_distance(
-            user_lat,
-            user_lon,
-            h["lat"],
-            h["lon"]
-        )
-
-        distances.append((h,d))
-
-    distances.sort(
-        key=lambda x:x[1]
-    )
-
-    for h,d in distances[:5]:
-
-        st.write(
-
-            h["name"],
-            " — ",
-            round(d,2),
-            "km"
-
-        )
-
-
-# -------------------------
-# PAGE 3 — RANKINGS
-# -------------------------
-
-elif page == "🏆 Rankings":
-
-    st.title("🏆 Hospital Rankings")
-
-    ranked = []
-
-    for h in filtered:
-
-        score = calculate_score(h)
-
-        ranked.append(
-            (h,score)
-        )
-
-    ranked.sort(
-        key=lambda x:x[1],
-        reverse=True
-    )
-
-    rank_data=[]
-
-    for i,(h,s) in enumerate(ranked):
-
-        rank_data.append({
-
-            "Rank":i+1,
-            "Hospital":h["name"],
-            "Score":s
+# ===============================
+# BUILD HOSPITAL DATA
+# ===============================
+
+hospital_list = []
+
+for city, hospitals in cities_data.items():
+
+    for name,lat,lon in hospitals:
+
+        doctors=[]
+
+        for i in range(3):
+            doctors.append({
+                "name":fake.name(),
+                "speciality":random.choice(specialities),
+                "experience":random.randint(5,25)
+            })
+
+        hospital_list.append({
+
+            "city":city,
+            "name":name,
+            "lat":lat,
+            "lon":lon,
+            "rating":round(random.uniform(4.0,4.9),1),
+            "beds_total":random.randint(200,900),
+            "beds_available":random.randint(20,200),
+            "specialities":random.sample(specialities,3),
+            "doctors":doctors
 
         })
 
-    df = pd.DataFrame(rank_data)
+df = pd.DataFrame(hospital_list)
 
-    st.dataframe(df)
+# ===============================
+# SIDEBAR
+# ===============================
 
-    fig = px.bar(
-        df,
-        x="Hospital",
-        y="Score",
-        color="Score"
+with st.sidebar:
+
+    st.title("🏥 MediFind Pro")
+
+    city = st.selectbox(
+        "Select City",
+        sorted(df["city"].unique())
     )
 
-    st.plotly_chart(fig)
+    speciality_filter = st.selectbox(
+        "Filter Speciality",
+        ["All"]+specialities
+    )
 
+    rating_filter = st.slider(
+        "Minimum Rating",
+        4.0,
+        5.0,
+        4.0
+    )
 
-# -------------------------
-# PAGE 4 — ANALYTICS
-# -------------------------
+    page = st.radio(
+        "Navigation",
+        [
+        "🏥 Hospital Finder",
+        "📊 Dashboard",
+        "🗺️ Map",
+        "🚨 Emergency"
+        ]
+    )
 
-elif page == "📊 Analytics":
+# ===============================
+# FILTER DATA
+# ===============================
 
-    st.title("📊 Patient Analytics")
+filtered_df = df[df["city"]==city]
 
-    for h in filtered:
+if speciality_filter!="All":
 
-        monthly = h["patient_stats"]["monthly"]
-
-        fig = px.line(
-
-            y=monthly,
-
-            title=h["name"]
-
+    filtered_df = filtered_df[
+        filtered_df["specialities"].apply(
+            lambda x: speciality_filter in x
         )
+    ]
 
-        st.plotly_chart(fig)
+filtered_df = filtered_df[
+    filtered_df["rating"]>=rating_filter
+]
 
+# ===============================
+# PAGE 1 — HOSPITAL FINDER
+# ===============================
 
-# -------------------------
-# PAGE 5 — MAP
-# -------------------------
+if page=="🏥 Hospital Finder":
 
-elif page == "🗺️ Map":
+    st.markdown(f"""
+    <div class='hero'>
+    <h1>🏥 MediFind Pro — {city}</h1>
+    <p>Find top hospitals with live availability</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Metrics
+
+    col1,col2,col3=st.columns(3)
+
+    col1.metric(
+        "Hospitals",
+        len(filtered_df)
+    )
+
+    col2.metric(
+        "Total Beds",
+        int(filtered_df["beds_total"].sum())
+    )
+
+    col3.metric(
+        "Available Beds",
+        int(filtered_df["beds_available"].sum())
+    )
+
+    st.divider()
+
+    # Hospital Cards
+
+    for i,row in filtered_df.iterrows():
+
+        with st.container():
+
+            st.markdown(f"""
+            <div class='card'>
+            <h3>🏥 {row['name']}</h3>
+            ⭐ {row['rating']}/5
+            <br>
+            🛏️ Available Beds:
+            {row['beds_available']} / {row['beds_total']}
+            <br>
+            {" ".join([f"<span class='badge'>{s}</span>" for s in row['specialities']])}
+            </div>
+            """, unsafe_allow_html=True)
+
+            tab1,tab2=st.tabs(
+                ["👨‍⚕️ Doctors","📊 Bed Availability"]
+            )
+
+            with tab1:
+
+                for d in row["doctors"]:
+
+                    st.write(
+                        f"👨‍⚕️ {d['name']} — {d['speciality']} ({d['experience']} yrs)"
+                    )
+
+            with tab2:
+
+                beds=row["beds_available"]
+                used=row["beds_total"]-beds
+
+                pie_df=pd.DataFrame({
+                    "Status":["Available","Occupied"],
+                    "Beds":[beds,used]
+                })
+
+                fig=px.pie(
+                    pie_df,
+                    values="Beds",
+                    names="Status",
+                    title="Bed Status"
+                )
+
+                st.plotly_chart(
+                    fig,
+                    use_container_width=True
+                )
+
+# ===============================
+# PAGE 2 — DASHBOARD
+# ===============================
+
+elif page=="📊 Dashboard":
+
+    st.title("📊 Analytics Dashboard")
+
+    fig1=px.bar(
+        filtered_df,
+        x="name",
+        y="rating",
+        title="Hospital Ratings"
+    )
+
+    st.plotly_chart(
+        fig1,
+        use_container_width=True
+    )
+
+    fig2=px.scatter(
+        filtered_df,
+        x="beds_total",
+        y="beds_available",
+        size="rating",
+        hover_name="name",
+        title="Beds vs Availability"
+    )
+
+    st.plotly_chart(
+        fig2,
+        use_container_width=True
+    )
+
+# ===============================
+# PAGE 3 — MAP
+# ===============================
+
+elif page=="🗺️ Map":
 
     st.title("🗺️ Hospital Map")
 
-    m = folium.Map(
-        location=[21.1458,79.0882],
-        zoom_start=5
+    center_lat=filtered_df["lat"].mean()
+    center_lon=filtered_df["lon"].mean()
+
+    m=folium.Map(
+        location=[center_lat,center_lon],
+        zoom_start=12
     )
 
-    for h in filtered:
+    for _,row in filtered_df.iterrows():
 
         folium.Marker(
-
-            [h["lat"],h["lon"]],
-
-            popup=h["name"]
-
+            [row["lat"],row["lon"]],
+            popup=row["name"]
         ).add_to(m)
 
     st_folium(
         m,
-        width=900,
+        width=1000,
         height=500
     )
 
+# ===============================
+# PAGE 4 — EMERGENCY
+# ===============================
 
-# -------------------------
-# PAGE 6 — APPOINTMENT
-# -------------------------
+elif page=="🚨 Emergency":
 
-elif page == "📅 Appointment":
-
-    st.title("📅 Book Appointment")
-
-    hospital_names = [
-        h["name"]
-        for h in filtered
-    ]
-
-    selected_hospital = st.selectbox(
-        "Hospital",
-        hospital_names
+    st.error(
+        "🚨 In case of emergency call 112 immediately"
     )
 
-    hospital = next(
-        h for h in filtered
-        if h["name"] ==
-        selected_hospital
+    st.markdown("### 🚑 Emergency Numbers")
+
+    st.write("🚑 Ambulance — 108")
+    st.write("🚓 Police — 100")
+    st.write("🚒 Fire — 101")
+
+# ===============================
+# NEAREST HOSPITAL FINDER
+# ===============================
+
+st.sidebar.markdown("---")
+
+st.sidebar.subheader(
+"📍 Nearest Hospital Finder"
+)
+
+user_lat=st.sidebar.number_input(
+"Your Latitude",
+value=21.1458
+)
+
+user_lon=st.sidebar.number_input(
+"Your Longitude",
+value=79.0882
+)
+
+if st.sidebar.button("Find Nearest"):
+
+    distances=[]
+
+    for _,row in filtered_df.iterrows():
+
+        dist=geodesic(
+            (user_lat,user_lon),
+            (row["lat"],row["lon"])
+        ).km
+
+        distances.append(dist)
+
+    filtered_df["distance_km"]=distances
+
+    nearest=filtered_df.sort_values(
+        "distance_km"
+    ).iloc[0]
+
+    st.sidebar.success(
+        f"Nearest: {nearest['name']} ({nearest['distance_km']:.2f} km)"
     )
-
-    doctor_names = [
-
-        doc["name"]
-        for doc in hospital["doctors"]
-
-    ]
-
-    selected_doctor = st.selectbox(
-        "Doctor",
-        doctor_names
-    )
-
-    name = st.text_input(
-        "Patient Name"
-    )
-
-    phone = st.text_input(
-        "Phone Number"
-    )
-
-    date = st.date_input(
-        "Date"
-    )
-
-    if st.button(
-        "Book Appointment"
-    ):
-
-        if name and phone:
-
-            st.success(
-                f"Appointment booked with {selected_doctor}"
-            )
-
-        else:
-
-            st.error(
-                "Enter required details"
-            )
