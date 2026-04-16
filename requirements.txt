@@ -5,3 +5,8 @@ plotly
 folium
 streamlit-folium
 pydeck
+matplotlib
+seaborn
+faker
+geopy
+Pillow
