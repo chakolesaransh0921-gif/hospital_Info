@@ -1,9 +1,8 @@
 streamlit
-numpy
 pandas
-matplotlib
-seaborn
+numpy
 plotly
 folium
 streamlit-folium
-pydeck
+math 
+random 
