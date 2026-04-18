@@ -494,4 +494,4 @@ Developed by <b>Saransh Chakole</b> | MCA Project 2026<br>
 <small>Medifind &copy; 2024</small>
 </p>
 """, unsafe_allow_html=True)
-```
+
