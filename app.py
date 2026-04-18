@@ -7,6 +7,26 @@ from streamlit_folium import st_folium
 import datetime
 
 
+# ✅ ADD THIS (Fix)
+menu = st.sidebar.radio(
+    "📌 Navigation",
+    [
+        "Home",
+        "Find Hospital",
+        "Emergency Numbers"
+    ]
+)
+
+# Your hospital data
+HOSPITALS = {
+    "Mumbai": [
+        {
+            "name": "Kokilaben Dhirubhai Ambani Hospital"
+        }
+    ]
+}
+
+# PART 1 (Keep as it is)
 # Home Page
 if menu == "Home":
 
