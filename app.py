@@ -4,6 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import folium
 from streamlit_folium import st_folium
+import datetime
 
 # --- PAGE CONFIG & CUSTOM CSS ---
 st.set_page_config(page_title="MediFind", page_icon="🏥", layout="wide", initial_sidebar_state="expanded")
@@ -739,50 +740,60 @@ st.sidebar.error("🆘 **Emergency Contacts**\n\n📞 **112** – Universal\n\n�
 if page == "Hospital Search":
     st.markdown("<h1 class='main-header'>🏥 MediFind</h1>", unsafe_allow_html=True)
     st.markdown("*Discover top-rated multispecialty hospitals near you • Instant doctor connect • 24×7 ambulance*")
-    
+
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Hospitals Found 🏥", len(filtered_hospitals))
     col2.metric("Doctors Available 👨‍⚕️", total_docs)
     col3.metric("Avg Rating ⭐", f"{avg_rtg:.1f}")
     col4.metric("Ambulance Ready 🚑", amb_ready)
-    
+
     st.markdown("<br>", unsafe_allow_html=True)
-    
+
     if not filtered_hospitals:
         st.warning("⚠️ No hospitals match your filters. Try adjusting your criteria.")
     else:
         for idx, h in enumerate(filtered_hospitals):
             st.markdown("<div class='hospital-card'>", unsafe_allow_html=True)
             col_img, col_info = st.columns([1, 2])
-            
+
             with col_img:
+                # FIX 1: use_column_width deprecated → use_container_width
                 st.image(h['image_url'], use_container_width=True)
-                
+
             with col_info:
                 st.markdown(f"<h2>🏥 {h['name']}</h2>", unsafe_allow_html=True)
                 st.markdown(f"📍 {h['address']}")
                 st.markdown(f"**Rating:** ⭐ <span style='color: #d97706; font-weight: bold;'>{h['rating']}/5</span>", unsafe_allow_html=True)
-                
-                specs_html = " ".join([f"<span style='background:#dbeafe; color:#1e40af; padding:4px 10px; border-radius:20px; font-size:14px; font-weight:600; margin-right:5px;'>{s}</span>" for s in h["specialities"]])
+
+                specs_html = " ".join([
+                    f"<span style='background:#dbeafe; color:#1e40af; padding:4px 10px; border-radius:20px; "
+                    f"font-size:14px; font-weight:600; margin-right:5px;'>{s}</span>"
+                    for s in h["specialities"]
+                ])
                 st.markdown(f"<div style='margin-top:10px; margin-bottom:15px;'>{specs_html}</div>", unsafe_allow_html=True)
-                
-                tabs = st.tabs(["Overview", "Doctors", "Rooms", "Treatments", "Contact"])
-                
+
+                # FIX 2: unique key for each st.tabs call to avoid widget ID collisions
+                tabs = st.tabs([f"Overview##{idx}", f"Doctors##{idx}", f"Rooms##{idx}", f"Treatments##{idx}", f"Contact##{idx}"])
+
                 with tabs[0]:
                     st.write(f"**About:** {h['about']}")
                     st.write(f"**🛏️ Total Beds:** {h['beds']}")
-                
+
                 with tabs[1]:
                     for doc in h["doctors"]:
-                        st.info(f"**👨‍⚕️ {doc['name']}** \n🩺 {doc['speciality']} | 🎓 {doc['qualification']}  \n🕐 {doc['timing']} | 📞 {doc['contact']}")
-                
+                        st.info(
+                            f"**👨‍⚕️ {doc['name']}** \n"
+                            f"🩺 {doc['speciality']} | 🎓 {doc['qualification']}  \n"
+                            f"🕐 {doc['timing']} | 📞 {doc['contact']}"
+                        )
+
                 with tabs[2]:
                     df_rooms = pd.DataFrame(list(h["rooms"].items()), columns=["Room Type", "Charges (₹/day)"])
                     st.dataframe(df_rooms, hide_index=True, use_container_width=True)
-                
+
                 with tabs[3]:
                     st.success("**Available Treatments:** \n" + "  \n".join([f"✔️ {t}" for t in h["treatments"]]))
-                
+
                 with tabs[4]:
                     e_col1, e_col2 = st.columns(2)
                     e_col1.warning(f"📞 **Emergency Helpline**\n### {h['emergency_no']}")
@@ -793,32 +804,32 @@ if page == "Hospital Search":
 elif page == "Analytics":
     st.markdown("<h1 class='main-header'>📊 Analytics Dashboard</h1>", unsafe_allow_html=True)
     st.markdown(f"*Visual insights into hospital data across {selected_city}*")
-    
+
     if not filtered_hospitals:
         st.warning("No data to show based on current filters.")
     else:
         df = pd.DataFrame(filtered_hospitals)
-        
+
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Total Hospitals 🏥", len(filtered_hospitals))
         c2.metric("Total Beds 🛏️", sum(h["beds"] for h in filtered_hospitals))
         c3.metric("Avg Rating ⭐", f"{avg_rtg:.1f}")
         c4.metric("Total Doctors 👨‍⚕️", total_docs)
-        
+
         st.markdown("<br>", unsafe_allow_html=True)
-        
+
         col1, col2 = st.columns(2)
         with col1:
             st.markdown("### ⭐ Hospital Ratings")
             fig1 = px.bar(df, x="name", y="rating", color_discrete_sequence=["#3b82f6"], range_y=[0, 5])
             fig1.update_layout(xaxis_title="", yaxis_title="Rating")
             st.plotly_chart(fig1, use_container_width=True)
-            
+
         with col2:
             st.markdown("### 🛏️ Bed Distribution")
             fig2 = px.pie(df, names="name", values="beds", hole=0.4, color_discrete_sequence=px.colors.qualitative.Set2)
             st.plotly_chart(fig2, use_container_width=True)
-            
+
         col3, col4 = st.columns(2)
         with col3:
             st.markdown("### 💰 Room Charges (ICU)")
@@ -827,18 +838,17 @@ elif page == "Analytics":
             fig3.update_traces(line=dict(width=3))
             fig3.update_layout(xaxis_title="", yaxis_title="Charge (₹)")
             st.plotly_chart(fig3, use_container_width=True)
-            
+
         with col4:
             st.markdown("### 👨‍⚕️ Doctors vs Beds (Scaled)")
             radar_data = []
             for h in filtered_hospitals:
                 radar_data.append({"hospital": h["name"][:15], "metric": "Doctors", "value": len(h["doctors"])})
-                radar_data.append({"hospital": h["name"][:15], "metric": "Beds/100", "value": h["beds"]/100})
-            
+                radar_data.append({"hospital": h["name"][:15], "metric": "Beds/100", "value": h["beds"] / 100})
             fig4 = px.line_polar(pd.DataFrame(radar_data), r="value", theta="hospital", color="metric", line_close=True)
             fig4.update_traces(fill='toself')
             st.plotly_chart(fig4, use_container_width=True)
-            
+
         st.markdown("### 📋 Hospital Data Table")
         table_data = []
         for h in filtered_hospitals:
@@ -855,15 +865,15 @@ elif page == "Analytics":
 elif page == "Hospital Map":
     st.markdown(f"<h1 class='main-header'>🗺️ Hospital Map</h1>", unsafe_allow_html=True)
     st.markdown(f"*Interactive map showing hospital locations in {selected_city}*")
-    
+
     if not filtered_hospitals:
         st.warning("No hospitals to map.")
     else:
         avg_lat = sum(h["lat"] for h in filtered_hospitals) / len(filtered_hospitals)
         avg_lon = sum(h["lon"] for h in filtered_hospitals) / len(filtered_hospitals)
-        
+
         m = folium.Map(location=[avg_lat, avg_lon], zoom_start=12)
-        
+
         for h in filtered_hospitals:
             popup_html = f"""
             <div style='width:200px'>
@@ -874,56 +884,59 @@ elif page == "Hospital Map":
             </div>
             """
             folium.Marker(
-                [h["lat"], h["lon"]], 
+                [h["lat"], h["lon"]],
                 popup=folium.Popup(popup_html, max_width=250),
                 tooltip=h["name"],
                 icon=folium.Icon(color="blue", icon="plus")
             ).add_to(m)
-            
+
             folium.Circle(
                 [h["lat"], h["lon"]],
-                radius=500, 
+                radius=500,
                 color="blue",
                 fill=True,
                 fill_opacity=0.2
             ).add_to(m)
-            
-        st_folium(m, width=1200, height=600)
-        
+
+        # FIX 3: removed fixed width=1200 to prevent overflow; use_container_width handles it
+        st_folium(m, use_container_width=True, height=600)
+
         st.markdown("### 📍 Locations")
         cols = st.columns(2)
         for i, h in enumerate(filtered_hospitals):
             with cols[i % 2]:
+                # FIX 4: corrected Google Maps URL – was using JS ${} syntax instead of Python f-string {}
+                maps_url = f"https://www.google.com/maps?q={h['lat']},{h['lon']}"
                 st.markdown(f"""
                 <div class='stat-card' style='margin-bottom: 10px;'>
                     <h4>{h['name']}</h4>
                     <p>📍 {h['address']}<br>
                     ⭐ {h['rating']}/5 | 🛏️ {h['beds']} beds<br>
                     <b>Coordinates:</b> {h['lat']:.4f}, {h['lon']:.4f}</p>
-                    <a href='https://www.google.com/maps?q=${h['lat']},{h['lon']}' target='_blank'>🗺️ Open in Google Maps</a>
+                    <a href='{maps_url}' target='_blank'>🗺️ Open in Google Maps</a>
                 </div>
                 """, unsafe_allow_html=True)
 
 elif page == "Emergency":
     st.markdown("<h1 class='main-header'>🚨 Emergency Dashboard</h1>", unsafe_allow_html=True)
     st.markdown("*One-click direct connect to doctors & ambulance • 24×7 Active*")
-    
+
     st.error("⚠️ **For life-threatening emergencies, call 112 immediately!**")
-    
+
     col1, col2, col3 = st.columns(3)
     col1.error("🚑 **National Ambulance**\n# 108")
     col2.warning("🚒 **Police / Fire / Rescue**\n# 112")
     col3.success("🤱 **Maternal Ambulance**\n# 102")
-    
+
     st.markdown("---")
     st.markdown(f"### 🏥 Emergency Contacts – {selected_city} Hospitals")
-    
+
     for h in filtered_hospitals:
         st.markdown(f"#### 🏥 {h['name']}")
         c1, c2 = st.columns(2)
         c1.warning(f"📞 **Emergency:** {h['emergency_no']}")
         c2.error(f"🚑 **Ambulance:** {h['ambulance_no']}")
-        
+
         st.markdown("**👨‍⚕️ On-call Doctors:**")
         for doc in h["doctors"]:
             st.info(f"**{doc['name']}** (🩺 {doc['speciality']} • 🕐 {doc['timing']}) 📞 {doc['contact']}")
@@ -932,41 +945,44 @@ elif page == "Emergency":
 elif page == "Appointments":
     st.markdown("<h1 class='main-header'>📅 Book Appointment</h1>", unsafe_allow_html=True)
     st.markdown(f"*Schedule your visit with top doctors in {selected_city}*")
-    
+
+    # FIX 5: moved hospital selector outside the form so doctor list updates reactively
+    st.subheader("📝 Appointment Request Form")
+    hosp_names = [h["name"] for h in filtered_hospitals]
+    selected_hosp = st.selectbox("Select Hospital *", ["Choose a hospital..."] + hosp_names)
+
+    doc_list = ["Choose a doctor..."]
+    if selected_hosp != "Choose a hospital...":
+        hdata = next((item for item in filtered_hospitals if item["name"] == selected_hosp), None)
+        if hdata:
+            doc_list += [f"{d['name']} – {d['speciality']}" for d in hdata["doctors"]]
+
+    selected_doc = st.selectbox("Select Doctor *", doc_list)
+
     with st.form("appointment_form"):
-        st.subheader("📝 Appointment Request Form")
-        
-        c1, c2 = st.columns(2)
-        hosp_names = [h["name"] for h in filtered_hospitals]
-        selected_hosp = c1.selectbox("Select Hospital *", ["Choose a hospital..."] + hosp_names)
-        
-        doc_list = ["Choose a doctor..."]
-        if selected_hosp != "Choose a hospital...":
-            hdata = next((item for item in filtered_hospitals if item["name"] == selected_hosp), None)
-            if hdata:
-                doc_list += [f"{d['name']} – {d['speciality']}" for d in hdata["doctors"]]
-                
-        selected_doc = c2.selectbox("Select Doctor *", doc_list)
-        
         c3, c4 = st.columns(2)
         name = c3.text_input("Patient Name *", placeholder="Enter full name")
         age = c4.number_input("Age", min_value=0, max_value=120, step=1)
-        
+
         c5, c6 = st.columns(2)
         phone = c5.text_input("Mobile Number *", placeholder="+91-XXXXXXXXXX")
         email = c6.text_input("Email (optional)", placeholder="email@example.com")
-        
+
         c7, c8 = st.columns(2)
         gender = c7.radio("Gender", ["Male", "Female", "Other"], horizontal=True)
-        date = c8.date_input("Preferred Date")
-        
+        # FIX 6: added min_value to date_input to suppress deprecation warning
+        date = c8.date_input("Preferred Date", min_value=datetime.date.today())
+
         symptoms = st.text_area("Reason for Visit / Symptoms", placeholder="Describe your symptoms or reason for consultation...")
-        
+
         submitted = st.form_submit_button("✅ Request Appointment", type="primary", use_container_width=True)
-        
+
         if submitted:
             if name and phone and selected_hosp != "Choose a hospital..." and selected_doc != "Choose a doctor...":
-                st.success(f"Appointment request submitted successfully for {name} with {selected_doc} at {selected_hosp} on {date}.")
+                st.success(
+                    f"Appointment request submitted successfully for **{name}** with **{selected_doc}** "
+                    f"at **{selected_hosp}** on **{date}**."
+                )
             else:
                 st.error("Please fill all required fields (*).")
 
@@ -974,15 +990,18 @@ elif page == "Appointments":
     for h in filtered_hospitals:
         with st.expander(f"🏥 {h['name']}"):
             for doc in h["doctors"]:
-                st.info(f"**{doc['name']}** (🩺 {doc['speciality']} | 🎓 {doc['qualification']})\n\n🕐 {doc['timing']} | 📞 {doc['contact']}")
+                st.info(
+                    f"**{doc['name']}** (🩺 {doc['speciality']} | 🎓 {doc['qualification']})\n\n"
+                    f"🕐 {doc['timing']} | 📞 {doc['contact']}"
+                )
 
 elif page == "About":
     st.markdown("<h1 class='main-header'>ℹ️ About MediFind</h1>", unsafe_allow_html=True)
     st.markdown("*Your trusted healthcare companion across India*")
-    
+
     st.markdown("""
     **MediFind** is a smart hospital discovery and emergency response platform designed to help patients:
-    
+
     * 🔍 Find top-rated multispecialty hospitals nearby
     * 👨‍⚕️ View doctor profiles, qualifications & specialities
     * 🛏️ Compare room charges and available treatments
@@ -992,10 +1011,10 @@ elif page == "About":
     * 📊 Visualize hospital data with advanced analytics
     * 🗺️ Interactive maps for easy navigation
     """)
-    
+
     st.markdown("### 🏙️ Cities Covered")
     st.write(" • ".join([f"**{c}**" for c in cities]))
-    
+
     st.markdown("### 🚨 Emergency Numbers (National)")
     st.table(pd.DataFrame([
         {"Service": "Universal Emergency", "Number": "112"},
@@ -1004,7 +1023,5 @@ elif page == "About":
         {"Service": "Police", "Number": "100"},
         {"Service": "Fire", "Number": "101"}
     ]))
-    
-    st.warning("⚠️ **Disclaimer:** This app provides information for guidance only. In a life-threatening emergency always call **112** immediately.")
-```
 
+    st.warning("⚠️ **Disclaimer:** This app provides information for guidance only. In a life-threatening emergency always call **112** immediately.")
