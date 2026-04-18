@@ -36,7 +36,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- DATASET (Expanded to Top 10 per City) ---
+# --- DATASET ---
 HOSPITALS = {
     "Mumbai": [
         {
@@ -1007,3 +1007,4 @@ elif page == "About":
     
     st.warning("⚠️ **Disclaimer:** This app provides information for guidance only. In a life-threatening emergency always call **112** immediately.")
 ```
+
