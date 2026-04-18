@@ -6,6 +6,179 @@ import folium
 from streamlit_folium import st_folium
 import datetime
 
+
+
+# Page Configuration
+st.set_page_config(
+    page_title="Medifind - Hospital Finder",
+    page_icon="🏥",
+    layout="wide"
+)
+
+# Custom Styling
+st.markdown("""
+<style>
+.main {
+    background-color: #f7fbff;
+}
+
+h1, h2, h3 {
+    color: #1f77b4;
+}
+
+.card {
+    background-color:#f0f8ff;
+    padding:15px;
+    border-radius:10px;
+    margin-bottom:15px;
+    box-shadow:2px 2px 5px grey;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# Header
+st.markdown("""
+<h1 style='text-align: center;'>
+🏥 Medifind – Nearby Hospital Finder
+</h1>
+
+<p style='text-align: center; font-size:18px;'>
+Find nearby hospitals quickly with complete details
+</p>
+""", unsafe_allow_html=True)
+
+st.markdown("---")
+
+# Sidebar Navigation
+menu = st.sidebar.radio(
+    "📌 Navigation",
+    [
+        "Home",
+        "Find Hospital",
+        "Emergency Numbers"
+    ]
+)
+
+# Sample Hospital Data
+hospitals = [
+    {
+        "name": "City Hospital",
+        "city": "Nagpur",
+        "beds": 120,
+        "ambulance": "Available",
+        "treatments": ["Cardiology", "Orthopedic"]
+    },
+    {
+        "name": "Sunrise Hospital",
+        "city": "Pune",
+        "beds": 80,
+        "ambulance": "Available",
+        "treatments": ["Neurology", "General Surgery"]
+    },
+    {
+        "name": "LifeCare Hospital",
+        "city": "Mumbai",
+        "beds": 150,
+        "ambulance": "Not Available",
+        "treatments": ["Pediatrics", "Dermatology"]
+    }
+]
+
+# Hospital Card Function
+def hospital_card(name, beds, ambulance, treatments):
+
+    st.markdown(f"""
+    <div class="card">
+        <h3>🏥 {name}</h3>
+        <p>🛏 Beds Available: {beds}</p>
+        <p>🚑 Ambulance: {ambulance}</p>
+        <p>💊 Treatments: {', '.join(treatments)}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+# Home Page
+if menu == "Home":
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.subheader("🏠 Welcome to Medifind")
+
+        st.info("""
+        Medifind helps users quickly find nearby hospitals
+        along with their facilities and services.
+        """)
+
+    with col2:
+        st.success("""
+        ✅ Fast Hospital Search  
+        ✅ Easy to Use  
+        ✅ Emergency Ready  
+        """)
+
+# Find Hospital Page
+elif menu == "Find Hospital":
+
+    st.header("🔍 Find Nearby Hospitals")
+
+    city_list = list(set([h["city"] for h in hospitals]))
+
+    selected_city = st.selectbox(
+        "📍 Select City",
+        city_list
+    )
+
+    st.markdown("### 🏥 Available Hospitals")
+
+    found = False
+
+    for h in hospitals:
+        if h["city"] == selected_city:
+
+            hospital_card(
+                h["name"],
+                h["beds"],
+                h["ambulance"],
+                h["treatments"]
+            )
+
+            found = True
+
+    if not found:
+        st.warning("⚠ No hospitals found in selected city.")
+
+# Emergency Numbers Page
+elif menu == "Emergency Numbers":
+
+    st.header("🚑 Emergency Numbers (National)")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("""
+        ### 📞 Emergency Contacts
+
+        🚑 Ambulance: **108**  
+        🚓 Police: **100**  
+        🔥 Fire: **101**  
+        ☎ General Emergency: **112**
+        """)
+
+    with col2:
+        st.info("""
+        In case of emergency, contact the nearest
+        available service immediately.
+        """)
+
+# Footer
+st.markdown("---")
+
+st.markdown("""
+<p style='text-align: center;'>
+Developed by <b>Saransh Chakole</b> | MCA Project 2026
+</p>
+""", unsafe_allow_html=True)
+
 # --- PAGE CONFIG & CUSTOM CSS ---
 st.set_page_config(page_title="MediFind", page_icon="🏥", layout="wide", initial_sidebar_state="expanded")
 
